@@ -17,11 +17,11 @@ def generate_launch_description():
     
     # Path to the controller config file
     pkg_path = get_package_share_directory("rmitbot_controller")
-    robot_controllers = os.path.join(pkg_path, 
+    ctrl_config_file = os.path.join(pkg_path, 
                              'config', 
                              'rmitbot_controller.yaml')
 
-    # joint_state_broadcaster (jsb): dynamic TF of the motor joints 
+    # joint_state_broadcaster (jsb): position, velocity of the joints
     joint_state_broadcaster_spawner = Node(
         package='controller_manager',
         executable='spawner',
@@ -33,18 +33,14 @@ def generate_launch_description():
         package="controller_manager",
         executable="spawner",
         arguments=[
-            'mecanum_drive_controller',
-            '--param-file',
-            robot_controllers,
-            '--controller-ros-args',
-            '-r /mecanum_drive_controller/tf_odometry:=/tf',
-            '--controller-ros-args',
-            '-r /mecanum_drive_controller/reference:=/rmitbot_controller/cmd_vel',
+            'mecanum_drive_controller','--param-file',ctrl_config_file,
+            '--controller-ros-args','-r /mecanum_drive_controller/tf_odometry:=/tf',
+            '--controller-ros-args','-r /mecanum_drive_controller/reference:=/rmitbot_controller/cmd_vel',
         ],
     )
     
     # controller must be spawned after the jsb
-    controller_spawner_after_jsb = RegisterEventHandler(
+    controller_spawner_delayed = RegisterEventHandler(
         event_handler=OnProcessExit(
             target_action=joint_state_broadcaster_spawner,
             on_exit=[controller_spawner],
@@ -54,6 +50,6 @@ def generate_launch_description():
     return LaunchDescription(
         [
             joint_state_broadcaster_spawner,
-            controller_spawner_after_jsb,
+            controller_spawner_delayed,
         ]
     )
